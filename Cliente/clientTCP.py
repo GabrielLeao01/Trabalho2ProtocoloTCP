@@ -1,37 +1,62 @@
 import socket
 
-ip_servidor = 'localhost'
-porta_servidor = 50000
+SERVIDOR_IP = 'localhost'  
+SERVIDOR_PORTA = 50000  
 
-tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-tcp.connect((ip_servidor, porta_servidor))
+def cliente_tcp():
+    try:
+        cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-print('Conectado\n')
-while True:
-    print("Insira a requisição:\narquivo nome.ext - Solicitar arquivo\nsair - Encerrar conexão\nchat - Exibir chat")
-    requisicao = input()
-    tcp.send(requisicao.encode())
+        cliente.connect((SERVIDOR_IP, SERVIDOR_PORTA))
+        print(f"Conectado ao servidor {SERVIDOR_IP}:{SERVIDOR_PORTA}")
 
-    if requisicao.startswith('arquivo'):
-        resposta = tcp.recv(1024)
-        if resposta == b"Erro: Arquivo nao encontrado":
-            print(resposta.decode())
-        elif resposta == b"OK":
-            arquivo = requisicao.split(' ', 1)[1]
-            with open(arquivo, 'wb') as file:
-                while True:
-                    data = tcp.recv(1024)
-                    if data == b"SUCESSO":
-                        break
-                    file.write(data)
-            print('Arquivo recebido')
-    elif requisicao == 'sair':
-        tcp.close()
-        print('Conexão encerrada')
-        break
-    elif requisicao == 'chat':
         while True:
-            data = tcp.recv(1024)
-            if not data:
+
+            mensagem = input("Insira a requisição:\narquivo nome.ext - Solicitar arquivo\nsair - Encerrar conexão\nchat - Exibir chat\n")
+            
+            cliente.send(mensagem.encode())
+
+            if mensagem.lower() == 'sair':
+                print("Desconectando do servidor...")
                 break
-            print(data.decode())
+            elif mensagem.lower().startswith("arquivo"):
+                resposta = cliente.recv(1024).decode()
+                if resposta == "OK":
+                    nome_arquivo = mensagem.split(' ', 1)[1]
+                    with open(nome_arquivo, 'wb') as file:
+                        while True:
+                            data = cliente.recv(1024)
+                            if data.endswith(b"SUCESSO"):
+                                file.write(data[:-7])  
+                                print("Arquivo recebido com sucesso")
+                                break
+                            file.write(data)
+                else:
+                    print(resposta)
+            elif mensagem.lower() == 'chat':
+                resposta_chat = cliente.recv(1024).decode()
+                print(f"Servidor: {resposta_chat}")
+                while True:
+                    mensagem_chat = input("Você: ")
+                    cliente.send(mensagem_chat.encode())
+                    if mensagem_chat.lower() == 'sair':
+                        resposta_chat = cliente.recv(1024).decode()
+                        print(f"Servidor: {resposta_chat}")
+                        break
+                    resposta_chat = cliente.recv(1024).decode()
+                    print(f"Servidor: {resposta_chat}")
+                
+            else:
+
+                resposta = cliente.recv(1024).decode()
+                print("Resposta do servidor:", resposta)
+
+    except Exception as e:
+        print(f"Erro na conexão: {e}")
+
+    finally:
+
+        cliente.close()
+
+if __name__ == "__main__":
+    cliente_tcp()

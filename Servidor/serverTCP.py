@@ -9,8 +9,6 @@ tcp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 tcp.bind((MEU_IP, MINHA_PORTA))
 tcp.listen(5)
 
-chat = ["Historico chat \n"]
-
 print("Servidor rodando")
 
 def handle_client(conexao, ip_cliente):
@@ -20,9 +18,6 @@ def handle_client(conexao, ip_cliente):
             requisicao = conexao.recv(1024).decode()
             if not requisicao:
                 break
-
-            chat.append(requisicao + "\n")
-
             if requisicao == 'sair':
                 print("O cliente ", ip_cliente, "se desconectou")
                 break
@@ -41,9 +36,16 @@ def handle_client(conexao, ip_cliente):
                 except FileNotFoundError:
                     conexao.send(b"Erro: Arquivo nao encontrado")
             elif requisicao == 'chat':
-                for linha in chat:
-                    conexao.send(linha.encode())
-                print("Historico de chat enviado")
+                conexao.send(b"Modo chat ativado")
+                while True:
+                    mensagem = conexao.recv(1024).decode()
+                    if mensagem == 'sair':
+                        conexao.send(b"Modo chat desativado")
+                        break
+                    print(f"Cliente {ip_cliente}: {mensagem}")
+                    resposta = input("Resposta para o cliente: ")
+                    conexao.send(resposta.encode())
+
         except Exception as e:
             print(f"Erro na conexão com {ip_cliente}: {e}")
             break
