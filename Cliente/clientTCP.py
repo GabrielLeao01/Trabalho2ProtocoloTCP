@@ -1,7 +1,15 @@
 import socket
+import hashlib
 
 SERVIDOR_IP = 'localhost'  
 SERVIDOR_PORTA = 50000  
+
+def calcular_hash(arquivo):
+    hash_md5 = hashlib.md5()
+    with open(arquivo, 'rb') as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
 
 def cliente_tcp():
     try:
@@ -22,6 +30,7 @@ def cliente_tcp():
             elif mensagem.lower().startswith("arquivo"):
                 resposta = cliente.recv(1024).decode()
                 if resposta == "OK":
+                    hash_servidor = cliente.recv(1024).decode()
                     nome_arquivo = mensagem.split(' ', 1)[1]
                     with open(nome_arquivo, 'wb') as file:
                         while True:
@@ -31,6 +40,12 @@ def cliente_tcp():
                                 print("Arquivo recebido com sucesso")
                                 break
                             file.write(data)
+                    
+                    hash_cliente = calcular_hash(nome_arquivo)
+                    if hash_cliente == hash_servidor:
+                        print("Integridade do arquivo verificada com sucesso")
+                    else:
+                        print("Erro: O hash do arquivo não corresponde")
                 else:
                     print(resposta)
             elif mensagem.lower() == 'chat':
@@ -44,10 +59,8 @@ def cliente_tcp():
                         print(f"Servidor: {resposta_chat}")
                         break
                     resposta_chat = cliente.recv(1024).decode()
-                    print(f"Servidor: {resposta_chat}")
-                
+                    print(f"Servidor: {resposta_chat}")               
             else:
-
                 resposta = cliente.recv(1024).decode()
                 print("Resposta do servidor:", resposta)
 

@@ -1,5 +1,6 @@
 import socket
 import threading
+import hashlib
 
 MEU_IP = ''
 MINHA_PORTA = 50000
@@ -10,6 +11,13 @@ tcp.bind((MEU_IP, MINHA_PORTA))
 tcp.listen(5)
 
 print("Servidor rodando")
+
+def calcular_hash(arquivo):
+    hash_md5 = hashlib.md5()
+    with open(arquivo, 'rb') as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
 
 def handle_client(conexao, ip_cliente):
     print("O cliente ", ip_cliente, "se conectou")
@@ -26,6 +34,8 @@ def handle_client(conexao, ip_cliente):
                 try:
                     with open(arquivo, 'rb') as file:
                         conexao.send(b"OK")
+                        hash_arquivo = calcular_hash(arquivo)
+                        conexao.send(hash_arquivo.encode())
                         while True:
                             data = file.read(1024)
                             if not data:
